@@ -1,0 +1,9 @@
+.build/
+.DS_Store
+music/*.mp3
+music/*.flac
+music/*.wav
+music/*.m4a
+music/*.aiff
+__pycache__/
+node_modules/
