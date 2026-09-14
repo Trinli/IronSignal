@@ -15,4 +15,5 @@ with ZipFile(output, "w", ZIP_DEFLATED) as archive:
         if path.is_file() and not path.is_symlink() and path.name != ".DS_Store":
             archive.write(path, path.relative_to(root))
     archive.write(root / "WEB.md", "WEB.md")
+    archive.write(root / "README.md", "README.md")
 print(f"Created {output} ({output.stat().st_size:,} bytes)")

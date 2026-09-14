@@ -1,4 +1,4 @@
-import data from './data.mjs';
+import data from './campaign.mjs';
 import {Game,STEP} from './engine.mjs';
 import {Renderer} from './render.mjs';
 import {MUSIC_URL} from './config.mjs';
@@ -32,15 +32,15 @@ function syncUI(){
     let title=game.level.name,copy=game.level.subtitle,actions=[];
     if(game.state==='title'){
       data.levels.forEach((level,i)=>{const b=button(`${i+1} · ${level.name}`,()=>game.choose(i));b.setAttribute('aria-pressed',String(i===game.levelIndex));$('mission-list').append(b);});
-      actions=[button('Starta uppdraget · Enter',()=>game.enter(),true)];$('menu-help').textContent='Samla 6 kapslar. Besegra kärnan. Nå EXTRACT. Välj bana med 1–5.';
+      actions=[button('Starta uppdraget · Enter',()=>game.enter(),true)];$('menu-help').textContent=game.levelIndex>=3?'Hitta färgade nyckelkort. E öppnar portar. Spruckna paneler döljer förråd.':'Samla 6 kapslar. Besegra kärnan. Nå EXTRACT. Välj bana med 1–5.';
     }else if(game.state==='paused'){
       title='PAUS';copy='Uppdraget väntar. Fortsätt där du var eller börja om.';
       actions=[button('Fortsätt · Esc',()=>game.start(),true),button('Startmeny · T',()=>game.title()),button('Försök igen · R',()=>game.retry())];$('menu-help').textContent='Till startmenyn återställer den aktuella banan.';
     }else if(game.state==='cleared'){
-      title='SEKTORN SÄKRAD';copy=`${game.score} poäng · ${game.cells}/${game.totalCells} kapslar`;
+      title='SEKTORN SÄKRAD';copy=`${game.score} poäng · ${game.cells}/${game.totalCells} kapslar · ${game.discovered.size} hemligheter`;
       actions=[button(`Nästa: ${data.levels[game.levelIndex+1].name} · Enter`,()=>game.enter(),true),button('Startmeny',()=>game.title())];
     }else if(game.state==='won'||game.state==='dead'){
-      title=game.state==='won'?'UPPDRAGET SLUTFÖRT':'SIGNAL FÖRLORAD';copy=`${game.score} poäng · ${game.cells}/${game.totalCells} kapslar`;
+      title=game.state==='won'?'UPPDRAGET SLUTFÖRT':'SIGNAL FÖRLORAD';copy=`${game.score} poäng · ${game.cells}/${game.totalCells} kapslar · ${game.discovered.size} hemligheter`;
       actions=[button('Försök igen · R',()=>game.retry(),true),button('Startmeny · Esc',()=>game.title())];
     }
     $('menu-title').textContent=title;$('menu-copy').textContent=copy;for(const a of actions)$('menu-actions').append(a);
@@ -58,7 +58,7 @@ window.addEventListener('keydown',e=>{
   const handled=controls[e.code]||['Escape','Enter','Tab','KeyP','KeyT','KeyR','KeyE','KeyM','KeyX','Digit1','Digit2','Digit3','Digit4','Digit5'].includes(e.code);
   if(!handled)return;e.preventDefault();if(e.repeat)return;unlock();
   if(controls[e.code]){heldCodes.add(e.code);game.press(controls[e.code]);}
-  else switch(e.code){case'Escape':game.escape();break;case'Enter':game.enter();break;case'Tab':game.map();break;case'KeyP':game.state==='paused'?game.start():game.pause();break;case'KeyT':if(['paused','dead','won','cleared'].includes(game.state))game.title();break;case'KeyR':game.retry();break;case'KeyE':game.warp();break;case'KeyM':pickMusic();break;case'KeyX':mute();break;default:game.choose(Number(e.code.slice(-1))-1);}
+  else switch(e.code){case'Escape':game.escape();break;case'Enter':game.enter();break;case'Tab':game.map();break;case'KeyP':game.state==='paused'?game.start():game.pause();break;case'KeyT':if(['paused','dead','won','cleared'].includes(game.state))game.title();break;case'KeyR':game.retry();break;case'KeyE':game.interact();break;case'KeyM':pickMusic();break;case'KeyX':mute();break;default:game.choose(Number(e.code.slice(-1))-1);}
   syncUI();if(game.state==='playing')canvas.focus();
 });
 window.addEventListener('keyup',e=>{heldCodes.delete(e.code);const key=controls[e.code];if(key&&![...heldCodes].some(code=>controls[code]===key))game.release(key);});
@@ -70,15 +70,12 @@ $('fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await docume
 canvas.addEventListener('pointerdown',()=>{canvas.focus();unlock();});
 const pointers=new Map();
 for(const b of document.querySelectorAll('.touch button')){
-  b.addEventListener('pointerdown',e=>{e.preventDefault();unlock();b.setPointerCapture(e.pointerId);if(b.dataset.key){pointers.set(e.pointerId,b.dataset.key);game.press(b.dataset.key);}else game.warp();});
+  b.addEventListener('pointerdown',e=>{e.preventDefault();unlock();b.setPointerCapture(e.pointerId);if(b.dataset.key){pointers.set(e.pointerId,b.dataset.key);game.press(b.dataset.key);}else game.interact();});
   const end=e=>{const key=pointers.get(e.pointerId);pointers.delete(e.pointerId);if(key&&![...pointers.values()].includes(key))game.release(key);};
   b.addEventListener('pointerup',end);b.addEventListener('pointercancel',end);b.addEventListener('lostpointercapture',end);
 }
 syncUI();
 if(MUSIC_URL)setMusic(MUSIC_URL,MUSIC_URL.split('/').pop());
-else if(['localhost','127.0.0.1','[::1]'].includes(location.hostname)){
-  fetch('./local-music.json').then(r=>r.ok?r.json():null).then(value=>{if(value?.url&&!objectURL)setMusic(value.url,value.name);}).catch(()=>{});
-}
 let previous=0,accumulator=0;
 function frame(now){const dt=previous?Math.min(.1,(now-previous)/1000):0;previous=now;
   if(game.state==='playing'){accumulator+=dt;while(accumulator>=STEP){game.tick(STEP);accumulator-=STEP;}}else accumulator=0;
