@@ -66,5 +66,32 @@ function scenery(l,garden){
   for(const w of l.warps)for(const [x,y] of [w.a,w.b])l.scenery.push(r(x,y+17,70,86,'#546982'),r(x,y+17,54,72,'#172b45'),t('[E] '+w.name,x,y+74,9));
   return l;
 }
+const furnace={
+  name:'EMBER CROSSING',subtitle:'Leap back and forth above the furnace. Thermo Boots reveal a route beneath the flames.',
+  width:3100,height:1100,accent:'#ffab58',spawn:[120,441],exit:[2890,522],
+  platforms:[ledge(0,280,3100,20),ledge(0,400,260),ledge(340,470,160),ledge(560,550,170),ledge(350,630,160),ledge(580,710,180),
+    ledge(810,650,180),ledge(1040,550,180),ledge(1270,460,230),ledge(1530,530,170),ledge(1750,610,180),ledge(1550,690,160),
+    ledge(1770,770,180),ledge(2000,690,180),ledge(2240,600,180),ledge(2480,510,180),ledge(2720,420,300),
+    ledge(1300,60,300,20),ledge(1280,60,20,220),ledge(1600,60,20,220)],
+  pickups:[cell(430,684),cell(680,764),cell(1160,604),cell(1630,744),cell(1880,824),cell(2560,564),
+    loot(1360,514,7),loot(650,604,3),loot(2110,744,1),loot(1390,114,6,{secret:'embers'}),loot(1530,114,3,{secret:'embers'})],
+  enemies:[{x:650,y:594,type:'turret'},{x:1140,y:594,type:'turret'},{x:1840,y:814,type:'turret'},{x:2320,y:644,type:'turret'},{x:2860,y:477,boss:true}],
+  supplies:[[870,689],[2590,549]],fire:[[0,300,3100,24]],
+  secrets:[{id:'embers',name:'BENEATH THE EMBERS',box:[1300,80,300,190]}],
+  warps:[{name:'FURNACE SHELTER',a:[1450,321],b:[1450,101],returnTo:[1360,501],requiresFire:true}],
+  doors:[],panels:[],springs:[],barrels:[],
+};
+function furnaceArt(l){
+  const r=(x,y,w,h,col)=>['r',x,y,w,h,col,0],t=(text,x,y,size=11)=>['t',x,y,text,size,l.accent,'center'];
+  l.sky=[r(1550,550,6000,3200,'#201422')];l.backdrop=[];l.scenery=[];
+  for(let x=80;x<3600;x+=230){l.backdrop.push(r(x,540,62,980,'#342437'),r(x+18,540,9,980,'#50323b'));
+    for(let y=200;y<1000;y+=120)l.backdrop.push(r(x,y,85,12,'#68413c'));}
+  for(let x=100;x<3100;x+=170){l.scenery.push(r(x,1010,5,220,'#78615b'),r(x,892,26,14,'#ffb257'));
+    for(let j=0;j<4;j++)l.scenery.push(r(x-30+j*20,350+(x+j*43)%330,3,5,'#ca7245'));}
+  for(const [x,y,w,h] of l.platforms){l.scenery.push(r(x+w/2,y+h/2,w,h,'#59464c'),r(x+w/2,y+h-3,w,6,'#b8a59a'));
+    for(let dx=12;dx<w-6;dx+=26)l.scenery.push(r(x+dx,y+h-7,12,7,'#f1ad58'));}
+  l.scenery.push(t('EMBER CROSSING / KEEP OFF THE FIRE',330,870),t('THERMO BOOTS / 12 SECONDS',1370,590),t('A SHELTER BELOW THE FLAMES',1450,405),t('[E] RETURN TO SAFETY',1450,168));
+  return l;
+}
 // The first three layouts and artwork are kept intact; later missions are authored here.
-export default {sprites:base.sprites,levels:[...base.levels.slice(0,3),scenery(garden,true),scenery(station,false)]};
+export default {sprites:base.sprites,levels:[...base.levels.slice(0,3),scenery(garden,true),scenery(station,false),furnaceArt(furnace)]};

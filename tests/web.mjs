@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import data from '../docs/campaign.mjs';
 import {Game,STEP} from '../docs/engine.mjs';
 const g=new Game(data.levels),advance=n=>{for(let i=0;i<n;i++)g.tick(STEP);};
-assert.equal(data.levels.length,5);g.start();advance(20);assert.equal(g.y,99);assert(g.grounded);
+assert.equal(data.levels.length,6);g.start();advance(20);assert.equal(g.y,99);assert(g.grounded);
 g.press('right');advance(55);g.press('jump');advance(28);g.release('right');advance(40);assert.equal(g.y,186);assert.equal(g.cells,1);
 const e=g.enemies[0],hp=e.hp;g.shoot(e.x,e.y+20,0,-720);advance(3);assert.equal(e.hp,hp-1);
 g.invincible=0;const health=g.health;g.hurt();g.hurt();assert.equal(g.health,health-1);
@@ -30,17 +30,17 @@ function routes(g){
     for(const t of surfaces)for(const x of [t[0]-130,t[0]-80,t[0]-15,t[0]+t[2]/2,t[0]+t[2]+15,t[0]+t[2]+80,t[0]+t[2]+130])starts.add(Math.min(p[0]+p[2]-13,Math.max(p[0]+13,x)));
     for(const x of starts)for(const direction of [-1,0,1])for(const jump of [false,true]){
       g.x=x;g.y=p[1]+21;g.vx=g.vy=0;g.grounded=true;g.coyote=.1;g.jumpBuffer=jump?.14:0;g.keys=new Set(direction<0?['left']:direction>0?['right']:[]);
-      for(let frame=0;frame<130;frame++){g.jumpBuffer-=STEP;g.move(STEP);g.events=[];if(g.y< -70)break;const target=support([g.x,g.y]);if(frame>2&&g.grounded&&target>=0){edges[source].add(target);if(target!==source||jump||!direction)break;}}
+      for(let frame=0;frame<130;frame++){g.jumpBuffer-=STEP;g.move(STEP);g.events=[];if(g.y< -70||(g.inFire&&g.fireproof<=0))break;const target=support([g.x,g.y]);if(frame>2&&g.grounded&&target>=0){edges[source].add(target);if(target!==source||jump||!direction)break;}}
     }
   }
-  for(const w of g.level.warps)if(!w.requires||g.cards.has(w.requires)){const a=support(w.a),b=support(w.b);assert(a>=0&&b>=0);edges[a].add(b);edges[b].add(a);}
+  for(const w of g.level.warps)if(!w.requiresFire&&(!w.requires||g.cards.has(w.requires))){const a=support(w.a),b=support(w.b);assert(a>=0&&b>=0);edges[a].add(b);edges[b].add(a);}
   const reachable=start=>{assert(start>=0);const seen=new Set([start]),queue=[start];while(queue.length)for(const n of edges[queue.shift()])if(!seen.has(n)){seen.add(n);queue.push(n);}return seen;};
   const visited=reachable(support(g.level.spawn));
   return {surfaces,edges,support,visited,reachable,exit:support([g.level.exit[0],g.level.exit[1]-61])};
 }
 for(let level=0;level<data.levels.length;level++){
   g.levelIndex=level;g.reset();g.start();
-  for(const w of g.level.warps){if(w.requires){[g.x,g.y]=w.a;assert(!g.warp());g.cards.add(w.requires);}[g.x,g.y]=w.a;g.warpCooldown=0;assert(g.warp());assert.deepEqual([g.x,g.y],w.b);assert(!g.warp());g.warpCooldown=0;assert(g.warp());assert.deepEqual([g.x,g.y],w.a);}
+  for(const w of g.level.warps.filter(w=>!w.requiresFire)){if(w.requires){[g.x,g.y]=w.a;assert(!g.warp());g.cards.add(w.requires);}[g.x,g.y]=w.a;g.warpCooldown=0;assert(g.warp());assert.deepEqual([g.x,g.y],w.b);assert(!g.warp());g.warpCooldown=0;assert(g.warp());assert.deepEqual([g.x,g.y],w.a);}
   g.cards.clear();
   for(const door of g.doors){
     const r=routes(g);assert(!r.visited.has(r.exit),'Exit reachable before opening gates');
@@ -73,3 +73,12 @@ g.finish(true);assert.equal(g.state,'won');g.escape();assert.equal(g.levelIndex,
 g.choose(4);g.start();g.pause();g.title();assert.equal(g.levelIndex,4);assert.equal(g.score,0);
 const publicFiles=fs.readdirSync(new URL('../docs/',import.meta.url));assert(!publicFiles.some(f=>/\.(mp3|flac|wav|m4a)$/i.test(f)));
 console.log('PASS campaign transitions, mission selection and public bundle');
+
+g.choose(5);g.retry();g.start();g.enemies=[];g.invincible=1000;g.x=800;g.y=321;g.vy=0;advance(1);assert.equal(g.state,'dead','Fire must ignore ordinary armor/invincibility');
+g.retry();g.start();g.enemies=[];const boots=g.pickups.find(p=>p.kind===7);g.x=boots.x;g.y=boots.y;advance(1);assert.equal(g.fireproof,12);
+g.pause();advance(120);assert.equal(g.fireproof,12);g.start();g.press('right');advance(55);g.release('right');g.press('left');advance(33);g.release('left');assert.equal(g.state,'playing');assert(g.fireproof>10);assert(g.inFire);assert(g.interact());advance(1);assert(g.discovered.has('embers'));
+g.fireproof=0;assert(!g.inFire);g.warpCooldown=0;assert(g.interact());assert.deepEqual([g.x,g.y],g.level.warps[0].returnTo);
+g.x=800;g.y=321;g.vy=0;g.fireproof=.01;advance(1);assert.equal(g.state,'dead');
+g.retry();g.start();g.x=1450;g.y=321;assert(!g.warp(),'Hatch requires active boots');g.x=800;g.y=-100;g.fireproof=12;advance(1);assert.equal(g.state,'dead','Boots do not prevent fall death');
+g.retry();assert.equal(g.fireproof,0);assert.equal(g.discovered.size,0);
+console.log('PASS lethal fire, timed boots, paused timer, walking on fire, secret hatch, safe return and reset');

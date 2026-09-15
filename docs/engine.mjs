@@ -11,18 +11,19 @@ export class Game {
   get atExit(){return Math.abs(this.x-this.level.exit[0])<65&&Math.abs(this.y-(this.level.exit[1]-61))<85;}
   get weapon(){return WEAPONS[this.weaponTier];}
   get solids(){return [...this.level.platforms,...this.doors.filter(d=>!d.open).map(d=>d.box),...this.panels.map(p=>p.box)];}
+  get inFire(){return (this.level.fire||[]).some(r=>intersects(this.box,r));}
   get readyToExit(){return this.cells===this.totalCells&&!this.enemies.some(e=>e.boss)&&this.doors.every(d=>d.open);}
   reset(){
     const l=this.level;[this.x,this.y]=l.spawn;this.vx=0;this.vy=0;this.facing=1;this.grounded=false;
     this.health=5;this.score=this.entryScore;this.cells=0;this.totalCells=l.pickups.filter(p=>p.kind===0).length;
-    this.weaponTier=Math.max(this.entryWeapon,[1,1,2,2,3][this.levelIndex]||1);this.armor=Math.min(4,this.levelIndex);this.maxArmor=6;
+    this.weaponTier=Math.max(this.entryWeapon,[1,1,2,2,3,3][this.levelIndex]||1);this.armor=Math.min(4,this.levelIndex);this.maxArmor=6;
     this.cards=new Set();this.discovered=new Set();this.doors=(l.doors||[]).map(d=>({...d,open:false}));this.panels=(l.panels||[]).map(p=>({...p}));this.barrels=(l.barrels||[]).map(b=>({...b,hp:2}));
-    this.time=0;this.invincible=0;this.cooldown=0;this.warpCooldown=0;this.overdrive=0;this.coyote=0;this.jumpBuffer=0;this.springCooldown=0;this.noticeCooldown=0;
+    this.fireproof=0;this.time=0;this.invincible=0;this.cooldown=0;this.warpCooldown=0;this.overdrive=0;this.coyote=0;this.jumpBuffer=0;this.springCooldown=0;this.noticeCooldown=0;
     this.keys=new Set();this.state='title';this.shots=[];this.particles=[];this.messages=[];this.events=[];
     this.pickups=l.pickups.map(p=>({...p}));this.supplies=l.supplies.map(([x,y])=>({x,y,hp:2}));
-    this.enemies=l.enemies.map(e=>{const hp=e.hp??(e.boss?[45,54,72,100,140][this.levelIndex]:[3,4,6,9,12][this.levelIndex]+(e.type==='heavy'?3:0));return {...e,home:e.x,hp,maxHP:hp,direction:-1,cooldown:1};});this.camera();
+    this.enemies=l.enemies.map(e=>{const hp=e.hp??(e.boss?[45,54,72,100,140,170][this.levelIndex]:[3,4,6,9,12,18][this.levelIndex]+(e.type==='heavy'?3:0));return {...e,home:e.x,hp,maxHP:hp,direction:-1,cooldown:1};});this.camera();
   }
-  camera(){this.cx=clamp(this.x+90,W/2,this.level.width-W/2);this.cy=clamp(this.y+65,H/2,this.level.height-H/2);}
+  camera(){this.cx=clamp(this.x+90,W/2,this.level.width-W/2);this.cy=clamp(this.y+(this.level.fire?-35:65),H/2,this.level.height-H/2);}
   start(){if(['title','paused','map'].includes(this.state)){this.keys.clear();this.state='playing';}}
   pause(){this.keys.clear();if(['playing','map'].includes(this.state))this.state='paused';}
   escape(){if(this.state==='paused')this.start();else if(['playing','map'].includes(this.state))this.pause();else if(this.state!=='title')this.title();}
@@ -33,13 +34,14 @@ export class Game {
   map(){if(this.state==='map')this.start();else if(this.state==='playing'){this.state='map';this.keys.clear();}}
   press(key){if(this.keys.has(key))return;this.keys.add(key);if(key==='jump'&&this.state==='playing')this.jumpBuffer=.14;}
   release(key){this.keys.delete(key);if(key==='jump'&&this.vy>150)this.vy*=.5;}
-  nearbyWarp(){for(const w of this.level.warps)for(const [from,to] of [[w.a,w.b],[w.b,w.a]])if(Math.abs(this.x-from[0])<37&&Math.abs(this.y-from[1])<45)return {from,to,name:w.name,requires:w.requires};return null;}
+  nearbyWarp(){for(const w of this.level.warps)for(const [from,to] of [[w.a,w.b],[w.b,w.returnTo||w.a]])if(Math.abs(this.x-from[0])<37&&Math.abs(this.y-from[1])<45)return {from,to,name:w.name,requires:w.requires,requiresFire:w.requiresFire&&from===w.a};return null;}
   nearDoor(){return this.doors.find(d=>!d.open&&Math.abs(this.x-(d.box[0]+d.box[2]/2))<65&&this.y+21>d.box[1]&&this.y-21<d.box[1]+d.box[3]);}
   interact(){if(this.state!=='playing')return false;const d=this.nearDoor();if(!d)return this.warp();
     if(!this.cards.has(d.key)){if(this.noticeCooldown<=0){this.message(`${d.key.toUpperCase()} CARD REQUIRED`,this.x,this.y);this.noticeCooldown=.5;}return false;}
     d.open=true;this.message(`${d.label} OPEN`,this.x,this.y);this.events.push('warp');return true;
   }
   warp(){const w=this.nearbyWarp();if(this.state!=='playing'||this.warpCooldown>0||!w)return false;
+    if(w.requiresFire&&this.fireproof<=0){this.message('THERMO BOOTS REQUIRED',this.x,this.y);return false;}
     if(w.requires&&!this.cards.has(w.requires)){this.message(`${w.requires.toUpperCase()} CARD REQUIRED`,this.x,this.y);return false;}
     this.burst(this.x,this.y,this.level.accent,22);[this.x,this.y]=w.to;this.vx=0;this.vy=0;this.grounded=false;this.coyote=0;this.jumpBuffer=0;
     this.warpCooldown=.8;this.invincible=Math.max(1,this.invincible);this.keys.clear();this.camera();this.burst(this.x,this.y,this.level.accent,22);this.message('TRANSFER COMPLETE',this.x,this.y);this.events.push('warp');return true;
@@ -72,8 +74,8 @@ export class Game {
   }
   tick(dt=STEP){
     if(this.state!=='playing')return;
-    this.time+=dt;this.invincible=Math.max(0,this.invincible-dt);this.cooldown-=dt;this.jumpBuffer-=dt;this.warpCooldown=Math.max(0,this.warpCooldown-dt);this.overdrive=Math.max(0,this.overdrive-dt);this.springCooldown=Math.max(0,this.springCooldown-dt);this.noticeCooldown=Math.max(0,this.noticeCooldown-dt);
-    this.move(dt);if(this.y < -70){this.health=0;this.finish(false);return;}
+    this.time+=dt;this.fireproof=Math.max(0,this.fireproof-dt);this.invincible=Math.max(0,this.invincible-dt);this.cooldown-=dt;this.jumpBuffer-=dt;this.warpCooldown=Math.max(0,this.warpCooldown-dt);this.overdrive=Math.max(0,this.overdrive-dt);this.springCooldown=Math.max(0,this.springCooldown-dt);this.noticeCooldown=Math.max(0,this.noticeCooldown-dt);
+    this.move(dt);if(this.inFire&&this.fireproof<=0){this.burst(this.x,this.y,'#ff794b',24);this.health=0;this.events.push('hurt');this.finish(false);return;}if(this.y < -70){this.health=0;this.finish(false);return;}
     if(this.grounded&&this.springCooldown<=0&&(this.level.springs||[]).some(s=>Math.abs(this.x-s.x)<26&&Math.abs(this.y-21-s.y)<5)){this.vy=800;this.grounded=false;this.coyote=0;this.springCooldown=.7;this.message('BOOST!',this.x,this.y);this.events.push('jump');}
     for(const room of this.level.secrets||[])if(intersects(this.box,room.box))this.reveal(room.id);
     if(this.keys.has('fire')&&this.cooldown<=0){const up=this.keys.has('up');this.shoot(this.x+(up?0:this.facing*24),this.y+5,up?0:this.facing*720,up?720:0);this.cooldown=this.weapon.rate*(this.overdrive>0?.43:1);this.events.push('shot');}
@@ -98,13 +100,14 @@ export class Game {
     }
     if(this.state!=='playing')return;
     this.pickups=this.pickups.filter(p=>{
-      if((p.secret&&!this.discovered.has(p.secret))||!intersects(this.box,[p.x-16,p.y-18,32,42])||(p.kind===1&&this.health===5)||(p.kind===3&&this.armor===this.maxArmor))return true;
+      if((p.readyAt||0)>this.time||(p.secret&&!this.discovered.has(p.secret))||!intersects(this.box,[p.x-16,p.y-18,32,42])||(p.kind===1&&this.health===5)||(p.kind===3&&this.armor===this.maxArmor))return true;
       if(p.kind===0){this.cells++;this.score+=250;this.message(`CELL ${this.cells}/${this.totalCells} +250`,p.x,p.y);}
       else if(p.kind===1){this.health=Math.min(5,this.health+2);this.message('HEALTH +2',p.x,p.y);}
       else if(p.kind===2){this.overdrive=12;this.message('OVERDRIVE / 12 SEC',p.x,p.y);}
       else if(p.kind===3){this.armor=Math.min(this.maxArmor,this.armor+3);this.message('ARMOR +3',p.x,p.y);}
       else if(p.kind===4){this.weaponTier=Math.max(this.weaponTier,p.tier);this.message(`${this.weapon.name} EQUIPPED`,p.x,p.y);}
       else if(p.kind===5){this.cards.add(p.key);this.message(`${p.key.toUpperCase()} ACCESS CARD`,p.x,p.y);}
+      else if(p.kind===7){this.fireproof=12;p.readyAt=this.time+18;this.message('THERMO BOOTS / 12 SEC',p.x,p.y);this.events.push('pickup');this.burst(p.x,p.y,'#fff17b');return true;}
       else if(p.kind===6){this.score+=1000;this.message('RELIC +1000',p.x,p.y);}
       this.burst(p.x,p.y,'#65eee8');this.events.push('pickup');return false;
     });

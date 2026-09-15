@@ -11,7 +11,7 @@ Alla resurser använder relativa adresser så att spelet fungerar under exempelv
 
 ## Musik
 
-Standardmusiken är `docs/music/game_music.mp3`, med källfilen `music/game_music.mp3`. Inställningen ligger i `docs/config.mjs`. Musiken startar efter klick på Starta uppdraget och pausas i menyerna. Spelaren kan också välja en egen lokal ljudfil i ljudpanelen.
+Standardmusiken är `docs/music/game_music.mp3`, med källfilen `music/game_music.mp3`. Inställningen ligger i `docs/config.mjs`. Musiken startar efter första klicket eller tangenttryckningen och fortsätter även i menyer och under paus. X eller Ljud-knappen stänger av ljudet. Spelaren kan också välja en egen lokal ljudfil i ljudpanelen.
 
 Efter byte av källfilen, kör:
 

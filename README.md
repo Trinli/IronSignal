@@ -1,6 +1,6 @@
 # Iron Signal
 
-Ett retrodoftande actionplattformsspel för webbläsare, med fem banor, pixelgrafik och `music/game_music.mp3` som standardmusik. Spelet använder HTML Canvas och JavaScript och kan publiceras direkt via GitHub Pages. Musik startar när du trycker på Starta uppdraget.
+Ett retrodoftande actionplattformsspel för webbläsare, med sex banor, pixelgrafik och `music/game_music.mp3` som standardmusik. Spelet använder HTML Canvas och JavaScript och kan publiceras direkt via GitHub Pages. Musiken startar efter första klicket eller tangenttryckningen och fortsätter genom menyer, paus och banbyten. X eller Ljud-knappen stänger uttryckligen av ljudet. Skotten har ett tydligt syntetiskt arkadljud.
 
 Den tidigare Swift-versionen och dess terminalstartare har tagits bort. Spelet utvecklas nu enbart för webbläsaren.
 
@@ -22,7 +22,7 @@ På mobil finns motsvarande knappar under spelet. Pausmenyn har alternativ för 
 
 ## Kampanjen
 
-Samla alla energiceller och slå ut banans säkerhetskärna för att öppna utgången. På de två sista banorna måste också nyckelportarna öppnas.
+Samla alla energiceller och slå ut banans säkerhetskärna för att öppna utgången. På bana 4 och 5 måste också nyckelportarna öppnas.
 
 1. **Iron Docks** – hamnens introduktionsbana.
 2. **Frozen Uplink** – isiga höjdskillnader och teleporter.
@@ -30,10 +30,12 @@ Samla alla energiceller och slå ut banans säkerhetskärna för att öppna utg�
 4. **Neon Garden** – ett arboretum, ett förseglat laboratorium och en kärnkammare. Hitta bärnstensfärgat och blått nyckelkort. En sprucken vägg döljer extra utrustning.
 5. **Orbital Citadel** – tre sektioner med växlande klättring åt båda håll, violett och blått nyckelkort, en underhållsteleport och ett hemligt vapenförråd.
 
+6. **Ember Crossing** – hopp åt båda håll över en dödlig eldbädd. Samla gula **Thermo Boots** för 12 sekunders eldskydd. Gå på elden till luckan och tryck E för att hitta ett hemligt rum under den. E inne i rummet återför dig till en säker plattform även när skyddet har gått ut. Stövlarna återkommer efter 18 sekunder. Alla obligatoriska mål går att nå utan eldskydd.
+
 De första tre banornas layout och bakgrundsgrafik är bevarade. Utrustning och fiendetålighet utvecklas genom kampanjen:
 
 - **Pulse → Plasma → Rail:** 1, 2 respektive 4 skada per träff. Rail kan träffa två fiender med samma skott. Plasma är standard från bana 3 och Rail från bana 5. En hemlig uppgradering kan ge Rail tidigare och följer med till nästa bana.
-- **Rustning:** absorberar träffar före hälsan. Senare banor börjar med mer rustning; blå sköldar fyller på tre steg, upp till sex.
+- **Rustning:** absorberar träffar före hälsan och färgar skjortan blå (ljusblå med mycket rustning). Eld är dödlig oavsett vanlig rustning; bara Thermo Boots skyddar mot den. Senare banor börjar med mer rustning; blå sköldar fyller på tre steg, upp till sex.
 - **Fiender:** får mer hälsa efter hand. Senare banor innehåller även bepansrade drönare och stationära kanontorn. Skadade vanliga fiender visar en hälsomätare.
 - **Nyckelkort:** öppnar portar i motsvarande färg med E. Nycklar förbrukas inte. Kartan visar kort och stängda portar.
 - **Hemliga rum:** skjut spruckna väggpaneler. Rummen ger bonuspoäng och extra utrustning, men behövs inte för att klara banan.
